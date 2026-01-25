@@ -51,10 +51,10 @@ export function AboutSection() {
                         viewport={{ once: true }}
                         className="relative"
                     >
-                        <div className="grid grid-cols-12 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                             {/* Main Tall Image */}
-                            <div className="col-span-7 space-y-4 pt-12">
-                                <div className="relative h-80 rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white transform hover:-translate-y-2 transition-transform duration-500">
+                            <div className="md:col-span-7 space-y-4 pt-0 md:pt-12">
+                                <div className="relative h-64 md:h-80 rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white transform hover:-translate-y-2 transition-transform duration-500">
                                     <Image
                                         src="https://images.unsplash.com/photo-1657020440981-db8c7d1ae4df?q=80&w=986&auto=format&fit=crop"
                                         alt="Khatu Shyam Ji Temple"
@@ -63,7 +63,7 @@ export function AboutSection() {
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                                 </div>
-                                <div className="relative h-48 rounded-[2rem] overflow-hidden shadow-xl border-4 border-white transform hover:-translate-y-2 transition-transform duration-500">
+                                <div className="relative h-40 md:h-48 rounded-[2rem] overflow-hidden shadow-xl border-4 border-white transform hover:-translate-y-2 transition-transform duration-500">
                                     <Image
                                         src="https://images.unsplash.com/photo-1701096804916-9161cac36cda?q=80&w=987&auto=format&fit=crop"
                                         alt="Divine Atmosphere"
@@ -74,8 +74,8 @@ export function AboutSection() {
                             </div>
 
                             {/* Secondary Column */}
-                            <div className="col-span-5 space-y-4">
-                                <div className="relative h-48 rounded-[2rem] overflow-hidden shadow-xl border-4 border-white transform hover:-translate-y-2 transition-transform duration-500">
+                            <div className="md:col-span-5 space-y-4">
+                                <div className="relative h-40 md:h-48 rounded-[2rem] overflow-hidden shadow-xl border-4 border-white transform hover:-translate-y-2 transition-transform duration-500">
                                     <Image
                                         src="https://images.unsplash.com/photo-1657020681754-6813dde5c34d?q=80&w=1172&auto=format&fit=crop"
                                         alt="Worship"
@@ -83,7 +83,7 @@ export function AboutSection() {
                                         className="object-cover"
                                     />
                                 </div>
-                                <div className="relative h-64 rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white transform hover:-translate-y-2 transition-transform duration-500">
+                                <div className="relative h-56 md:h-64 rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white transform hover:-translate-y-2 transition-transform duration-500">
                                     <Image
                                         src="https://images.unsplash.com/photo-1657020440989-35fdb0aabac5?q=80&w=1172&auto=format&fit=crop"
                                         alt="Temple View"
