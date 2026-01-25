@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 };
 
 import { Navbar } from "@/components/layout/Navbar";
+import { SmoothScroll } from "@/components/ui/SmoothScroll";
 
 export default function RootLayout({
   children,
@@ -30,6 +31,7 @@ export default function RootLayout({
           playfair.variable
         )}
       >
+        <SmoothScroll />
         <Navbar />
         {children}
       </body>

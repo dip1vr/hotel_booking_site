@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { Star, Quote } from "lucide-react";
 
 const reviews = [
@@ -30,7 +30,7 @@ const reviews = [
     }
 ];
 
-const cardVariants = {
+const cardVariants: Variants = {
     hidden: { opacity: 0, y: 40 },
     visible: {
         opacity: 1,
@@ -38,13 +38,13 @@ const cardVariants = {
         transition: {
             duration: 0.6,
             ease: "easeOut",
-            when: "beforeChildren", // Finish card animation before starting children
+            // 'when' is deprecated in favor of nested transition or orchestrating via staggerChildren on parent
             staggerChildren: 0.2
         }
     }
 };
 
-const iconVariants = {
+const iconVariants: Variants = {
     hidden: { scale: 0, opacity: 0, rotate: -45 },
     visible: {
         scale: 1,
@@ -58,7 +58,7 @@ const iconVariants = {
     }
 };
 
-const starsContainerVariants = {
+const starsContainerVariants: Variants = {
     hidden: { opacity: 1 },
     visible: {
         opacity: 1,
@@ -66,7 +66,7 @@ const starsContainerVariants = {
     }
 };
 
-const starVariants = {
+const starVariants: Variants = {
     hidden: { opacity: 0, scale: 0, rotate: -72 },
     visible: {
         opacity: 1,
