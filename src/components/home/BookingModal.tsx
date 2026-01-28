@@ -7,12 +7,12 @@ import { toJpeg } from 'html-to-image';
 import { TicketCard } from "./TicketCard";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/firebase";
-import { setDoc, doc, serverTimestamp, increment } from "firebase/firestore";
+import { setDoc, doc, serverTimestamp, increment, updateDoc } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { AuthModal } from "@/components/auth/AuthModal";
 
 interface Room {
-    id: number;
+    id: number | string;
     name: string;
     price: string;
     image: string;
@@ -152,6 +152,7 @@ export function BookingModal({ room, isOpen, onClose }: BookingModalProps) {
                 }, { merge: true });
             }
 
+
             // Save structured booking
             await setDoc(doc(db, "bookings", newBookingId), {
                 bookingId: newBookingId,
@@ -187,6 +188,34 @@ export function BookingModal({ room, isOpen, onClose }: BookingModalProps) {
                 status: "confirmed",
                 createdAt: serverTimestamp(),
             });
+
+            // Manage Invitation by Date
+            if (room && room.id) {
+                // Helper to get all dates in range
+                const getDatesInRange = (startDate: Date, endDate: Date) => {
+                    const date = new Date(startDate.getTime());
+                    const dates = [];
+                    while (date < endDate) {
+                        dates.push(new Date(date).toISOString().split('T')[0]);
+                        date.setDate(date.getDate() + 1);
+                    }
+                    return dates;
+                };
+
+                const start = new Date(checkIn);
+                const end = new Date(checkOut);
+                const dates = getDatesInRange(start, end);
+
+                // Update availability for each date
+                const updatePromises = dates.map(dateStr => {
+                    const availabilityRef = doc(db, "rooms", room.id.toString(), "availability", dateStr);
+                    return setDoc(availabilityRef, {
+                        bookedCount: increment(roomsCount)
+                    }, { merge: true });
+                });
+
+                await Promise.all(updatePromises);
+            }
 
             setBookingId(newBookingId);
             setStep(3);

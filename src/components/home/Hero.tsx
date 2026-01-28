@@ -4,16 +4,20 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Star, Award, ChevronDown } from "lucide-react";
 
+import Image from "next/image";
+
 export function Hero() {
     return (
-        <div className="relative min-h-screen w-full overflow-hidden flex items-start md:items-center justify-center">
+        <div className="relative min-h-[650px] md:min-h-screen w-full overflow-hidden flex items-start md:items-center justify-center">
             {/* Background Image with Overlay */}
             <div className="absolute inset-0 z-0">
-                <div
-                    className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 scale-105"
-                    style={{
-                        backgroundImage: "url('https://i.ibb.co/fzvVwnjt/Chat-GPT-Image-Jan-25-2026-07-22-31-PM.png')",
-                    }}
+                <Image
+                    src="https://i.ibb.co/fzvVwnjt/Chat-GPT-Image-Jan-25-2026-07-22-31-PM.png"
+                    alt="Hotel Lord Krishna Exterior"
+                    fill
+                    priority
+                    unoptimized
+                    className="object-cover object-center md:object-center transition-transform duration-1000 scale-100 hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-black/50" />
             </div>

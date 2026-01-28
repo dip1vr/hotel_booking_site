@@ -107,21 +107,33 @@ export function Navbar() {
                         ))}
                         {user ? (
                             <div className="flex items-center gap-4">
-                                <div className="hidden lg:flex items-center gap-2 text-slate-700">
-                                    <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                                <div className={cn(
+                                    "hidden lg:flex items-center gap-2",
+                                    showSolidNav ? "text-slate-700" : "text-white/90"
+                                )}>
+                                    <div className={cn(
+                                        "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
+                                        showSolidNav ? "bg-orange-100 text-orange-600" : "bg-white/20 text-white backdrop-blur-sm"
+                                    )}>
                                         <User className="w-4 h-4" />
                                     </div>
                                     <span className="text-sm font-medium">{user.displayName || "User"}</span>
                                 </div>
                                 <Link
                                     href="/my-bookings"
-                                    className="text-sm font-medium text-slate-600 hover:text-orange-600 transition-colors"
+                                    className={cn(
+                                        "text-sm font-medium transition-colors hover:text-orange-500",
+                                        showSolidNav ? "text-slate-600" : "text-white/90"
+                                    )}
                                 >
                                     My Bookings
                                 </Link>
                                 <Button
                                     onClick={() => logout()} variant="ghost" size="sm"
-                                    className="text-slate-500 hover:text-red-600"
+                                    className={cn(
+                                        "hover:text-red-500 transition-colors",
+                                        showSolidNav ? "text-slate-500" : "text-white/70 hover:bg-white/10"
+                                    )}
                                 >
                                     <LogOut className="w-4 h-4 mr-2" />
                                     Sign Out

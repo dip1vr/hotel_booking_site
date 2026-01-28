@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { RoomImageCarousel } from "./RoomImageCarousel";
 
 interface Room {
-    id: number;
+    id: number | string;
     name: string;
     price: string;
     image: string;

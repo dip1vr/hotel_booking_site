@@ -50,7 +50,7 @@ export function Amenities() {
                 </div>
 
                 {/* Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                     {amenities.map((item, index) => (
                         <motion.div
                             key={item.title}
@@ -58,7 +58,7 @@ export function Amenities() {
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true, amount: 0.3 }}
                             transition={{ delay: index * 0.05 }}
-                            className="group flex flex-col items-start text-left p-8 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                            className="group flex flex-col items-start text-left p-6 md:p-8 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
                         >
                             <div className={`p-4 rounded-2xl ${item.color} text-white mb-6 shadow-md transition-transform duration-300 group-hover:scale-105`}>
                                 <item.icon className="w-7 h-7 stroke-[1.5]" />
