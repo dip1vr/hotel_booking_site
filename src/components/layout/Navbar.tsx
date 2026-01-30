@@ -153,6 +153,7 @@ export function Navbar() {
                     <button
                         className="md:hidden p-2 relative z-50 focus:outline-none"
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        aria-label="Toggle menu"
                     >
                         <div className={cn(
                             "w-6 h-6 flex flex-col justify-center gap-1.5 transition-all text-current",
@@ -281,7 +282,7 @@ export function Navbar() {
                                     </div>
 
                                     <div className="flex gap-4 justify-center pt-6 border-t border-slate-100">
-                                        <a href="https://www.instagram.com/hotel_lord_krishna_0212?igsh=MTM1b3o3cm91NGoyZA==" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50 transition-all">
+                                        <a href="https://www.instagram.com/hotel_lord_krishna_0212?igsh=MTM1b3o3cm91NGoyZA==" target="_blank" rel="noopener noreferrer" aria-label="Follow us on Instagram" className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50 transition-all">
                                             <Instagram className="w-4 h-4" />
                                         </a>
                                     </div>

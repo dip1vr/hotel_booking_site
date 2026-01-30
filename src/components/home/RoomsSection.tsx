@@ -153,10 +153,10 @@ export function RoomsSection() {
                 snapshots.forEach(snap => {
                     if (snap.exists()) {
                         const booked = snap.data().bookedCount || 0;
-                        console.log(`[AVAILABILITY] Date: ${snap.id}, Booked: ${booked}`);
+                        // console.log(`[AVAILABILITY] Date: ${snap.id}, Booked: ${booked}`);
                         if (booked > maxBooked) maxBooked = booked;
                     } else {
-                        console.log(`[AVAILABILITY] Date: ${snap.id}, No bookings found (0)`);
+                        // console.log(`[AVAILABILITY] Date: ${snap.id}, No bookings found (0)`);
                     }
                 });
 
@@ -164,7 +164,7 @@ export function RoomsSection() {
                 const totalStock = room.totalStock || 10;
                 const available = Math.max(0, totalStock - maxBooked);
 
-                console.log(`[AVAILABILITY] Room: ${room.name}, Total: ${totalStock}, MaxBooked: ${maxBooked}, Available: ${available}`);
+                // console.log(`[AVAILABILITY] Room: ${room.name}, Total: ${totalStock}, MaxBooked: ${maxBooked}, Available: ${available}`);
 
                 results[room.id] = {
                     available,

@@ -13,9 +13,10 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://shyamheritage.com"),
   title: "Shyam Heritage Palace | Luxury Hotel in Khatu Shyam Ji",
   description: "Book luxury hotel rooms in Khatu Shyam Ji at best price. Experience royal hospitality, free cancellation & instant confirmation near the temple.",
-  keywords: ["Hotel in Khatu Shyam Ji", "Luxury Stay in Khatu", "Hotel near Khatu Shyam Temple", "Best Hotel in Khatu", "Shyam Heritage Palace"],
+  keywords: ["Hotel in Khatu Shyam Ji", "Luxury Stay in Khatu", "Hotel near Khatu Shyam Temple", "Best Hotel in Khatu", "Shyam Heritage Palace", "Hotel Lord Krishna"],
   openGraph: {
     title: "Shyam Heritage Palace | Luxury Hotel in Khatu",
     description: "Experience royal hospitality at Shyam Heritage Palace. Luxury rooms, modern amenities, and just steps away from Khatu Shyam Ji Temple.",
@@ -57,6 +58,7 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Hotel",
   "name": "Shyam Heritage Palace",
+  "alternateName": "Hotel Lord Krishna",
   "image": "https://shyamheritage.com/hotel-exterior.jpg",
   "description": "Experience royal hospitality at Shyam Heritage Palace, just steps away from Khatu Shyam Ji Temple.",
   "address": {

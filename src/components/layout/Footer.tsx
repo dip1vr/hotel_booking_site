@@ -57,7 +57,7 @@ export function Footer() {
                     <div>
                         <h3 className="font-serif font-bold text-lg mb-4">Follow Us</h3>
                         <div className="flex gap-4">
-                            <Link href="https://www.instagram.com/hotel_lord_krishna_0212?igsh=MTM1b3o3cm91NGoyZA==" className="p-2 bg-background rounded-full hover:text-primary shadow-sm transition-all hover:-translate-y-1">
+                            <Link href="https://www.instagram.com/hotel_lord_krishna_0212?igsh=MTM1b3o3cm91NGoyZA==" aria-label="Follow us on Instagram" className="p-2 bg-background rounded-full hover:text-primary shadow-sm transition-all hover:-translate-y-1">
                                 <Instagram className="w-5 h-5" />
                             </Link>
                         </div>

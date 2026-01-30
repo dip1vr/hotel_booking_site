@@ -564,7 +564,7 @@ export function BookingModal({ room, isOpen, onClose }: BookingModalProps) {
                                                     {(() => {
                                                         if (checkIn && checkOut) {
                                                             let minAvailable = roomStock;
-                                                            let d = new Date(checkIn);
+                                                            const d = new Date(checkIn);
                                                             const end = new Date(checkOut);
                                                             while (d < end) {
                                                                 const dateStr = format(d, "yyyy-MM-dd");
