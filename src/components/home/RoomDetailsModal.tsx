@@ -1,8 +1,10 @@
-"use client";
-
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Wind, Utensils } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { collection, getDocs, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 import { RoomImageCarousel } from "./RoomImageCarousel";
 
@@ -15,6 +17,7 @@ interface Room {
     description: string;
     size: string;
     amenities: { icon: React.ElementType; label: string }[];
+    totalStock?: number; // Ensure this is expected
 }
 
 interface RoomDetailsModalProps {
@@ -24,6 +27,46 @@ interface RoomDetailsModalProps {
 }
 
 export function RoomDetailsModal({ room, onClose, onBook }: RoomDetailsModalProps) {
+    // Availability State
+    const [bookedDates, setBookedDates] = useState<Set<string>>(new Set());
+    const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
+
+    useEffect(() => {
+        if (!room) return;
+
+        const fetchAvailability = async () => {
+            setIsLoadingAvailability(true);
+            try {
+                // Fetch next 3 months of availability logic or just all specific docs?
+                // Since dates are subcollections "YYYY-MM-DD", simplistic "get all" isn't efficient if there are years of data.
+                // However, for this localized test, we can fetch the "availability" subcollection.
+                // Note: Firestore subcollection 'availability' contains docs named by date 'YYYY-MM-DD'.
+                // We can just getDocs(collection(...)) to get ALL booked dates recorded.
+                // If that scales poorly, we'd query by range, but for now this is fine.
+
+                const querySnapshot = await getDocs(collection(db, "rooms", room.id.toString(), "availability"));
+                const newBookedDates = new Set<string>();
+                const totalStock = room.totalStock || 10;
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const bookedCount = data.bookedCount || 0;
+                    if (bookedCount >= totalStock) {
+                        newBookedDates.add(doc.id); // doc.id is '2025-01-29'
+                    }
+                });
+
+                setBookedDates(newBookedDates);
+            } catch (error) {
+                console.error("Error fetching availability for calendar:", error);
+            } finally {
+                setIsLoadingAvailability(false);
+            }
+        };
+
+        fetchAvailability();
+    }, [room]);
+
     if (!room) return null;
 
     const images = room.images || [room.image];
@@ -96,9 +139,43 @@ export function RoomDetailsModal({ room, onClose, onBook }: RoomDetailsModalProp
 
                                 <div className="prose prose-slate mb-8">
                                     <p className="text-slate-600 leading-relaxed">
-                                        {room.description} Experience the ultimate in comfort with our carefully curated interiors, designed to reflect the divinity of the location while providing modern luxury.
+                                        {room.description} Experience the ultimate in comfort with our carefully curated interiors.
                                     </p>
                                 </div>
+
+                                {/* Availability Calendar Section */}
+                                <div className="mb-8">
+                                    <h4 className="font-bold text-slate-900 mb-4 text-sm uppercase tracking-wider">Availability</h4>
+                                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex justify-center">
+                                        <Calendar
+                                            mode="single"
+                                            selected={new Date()}
+                                            modifiers={{
+                                                booked: (date) => {
+                                                    const dateStr = date.toISOString().split('T')[0];
+                                                    // This check needs real data. For now using mock/log method or we implement fetching
+                                                    // Since we can't easily fetch synchronously in render, we need `useEffect` to fetch availability
+                                                    return bookedDates.has(dateStr);
+                                                },
+                                                available: (date) => {
+                                                    const dateStr = date.toISOString().split('T')[0];
+                                                    return !bookedDates.has(dateStr) && date >= new Date(new Date().setHours(0, 0, 0, 0));
+                                                }
+                                            }}
+                                            modifiersStyles={{
+                                                booked: { backgroundColor: '#fee2e2', color: '#ef4444', textDecoration: 'line-through' },
+                                                available: { backgroundColor: '#dcfce7', color: '#166534' }
+                                            }}
+                                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                                            className="rounded-md border bg-white shadow-sm"
+                                        />
+                                    </div>
+                                    <div className="flex gap-4 mt-3 justify-center text-xs font-medium text-slate-500">
+                                        <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500" /> Available</div>
+                                        <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-red-500" /> Fully Booked</div>
+                                    </div>
+                                </div>
+
 
                                 <h4 className="font-bold text-slate-900 mb-4 text-sm uppercase tracking-wider">Room Amenities</h4>
                                 <div className="grid grid-cols-2 gap-4 mb-8">

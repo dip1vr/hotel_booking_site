@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Wifi, Tv, Coffee, Maximize2, Star, Wind, Utensils } from "lucide-react";
 import dynamic from "next/dynamic";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const BookingBar = dynamic(() => import("./BookingBar").then((mod) => mod.BookingBar));
@@ -13,7 +13,7 @@ const RoomDetailsModal = dynamic(() => import("./RoomDetailsModal").then((mod) =
 const BookingModal = dynamic(() => import("./BookingModal").then((mod) => mod.BookingModal));
 import { RoomImageCarousel } from "./RoomImageCarousel";
 
-// Define the Room interface to match what's expected by the UI and Modals
+// Define the Room interface
 interface Room {
     id: string | number;
     name: string;
@@ -23,6 +23,7 @@ interface Room {
     description: string;
     size: string;
     amenities: { icon: any; label: string }[];
+    totalStock?: number;
 }
 
 // Helper to map amenity strings to icons
@@ -36,11 +37,22 @@ const getAmenityIcon = (label: string) => {
     return Star; // Default icon
 };
 
+interface SearchResults {
+    [roomId: string]: {
+        available: number;
+        isAvailable: boolean;
+    }
+}
+
 export function RoomsSection() {
     const [rooms, setRooms] = useState<Room[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
     const [bookingRoom, setBookingRoom] = useState<Room | null>(null);
+
+    // Search State
+    const [searchResults, setSearchResults] = useState<SearchResults | null>(null);
+    const [isSearching, setIsSearching] = useState(false);
 
     useEffect(() => {
         const fetchRooms = async () => {
@@ -49,7 +61,7 @@ export function RoomsSection() {
                 const fetchedRooms: Room[] = querySnapshot.docs.map((doc) => {
                     const data = doc.data();
 
-                    // Format price if it's just a number string
+                    // Format price
                     let formattedPrice = data.price;
                     if (!formattedPrice.toString().startsWith("₹")) {
                         formattedPrice = `₹${data.price}`;
@@ -79,7 +91,8 @@ export function RoomsSection() {
                         images: imageArray,
                         description: data.description,
                         size: formattedSize,
-                        amenities: amenities
+                        amenities: amenities,
+                        totalStock: data.totalStock || 10 // Default to 10 if not set
                     };
                 });
                 setRooms(fetchedRooms);
@@ -93,10 +106,93 @@ export function RoomsSection() {
         fetchRooms();
     }, []);
 
+    const checkAvailability = async (checkIn: string, checkOut: string) => {
+        setIsSearching(true);
+        const results: SearchResults = {};
+
+        // Helper to get all dates
+        const getDates = (startIdx: Date, endIdx: Date) => {
+            const date = new Date(startIdx.getTime());
+            const dates = [];
+            while (date < endIdx) {
+                dates.push(new Date(date).toISOString().split('T')[0]);
+                date.setDate(date.getDate() + 1);
+            }
+            return dates;
+        };
+
+        const start = new Date(checkIn);
+        const end = new Date(checkOut);
+
+        // Basic validation
+        if (start >= end) {
+            alert("Check-out date must be after check-in date");
+            setIsSearching(false);
+            return;
+        }
+
+        const dates = getDates(start, end);
+
+        if (dates.length === 0) {
+            setSearchResults(null);
+            setIsSearching(false);
+            return;
+        }
+
+        try {
+            await Promise.all(rooms.map(async (room) => {
+                // Fetch availability for each date
+                const availabilityPromises = dates.map(date =>
+                    getDoc(doc(db, "rooms", room.id.toString(), "availability", date))
+                );
+
+                const snapshots = await Promise.all(availabilityPromises);
+
+                // Find max booked count across all dates in range
+                let maxBooked = 0;
+                snapshots.forEach(snap => {
+                    if (snap.exists()) {
+                        const booked = snap.data().bookedCount || 0;
+                        console.log(`[AVAILABILITY] Date: ${snap.id}, Booked: ${booked}`);
+                        if (booked > maxBooked) maxBooked = booked;
+                    } else {
+                        console.log(`[AVAILABILITY] Date: ${snap.id}, No bookings found (0)`);
+                    }
+                });
+
+                // Calculate available
+                const totalStock = room.totalStock || 10;
+                const available = Math.max(0, totalStock - maxBooked);
+
+                console.log(`[AVAILABILITY] Room: ${room.name}, Total: ${totalStock}, MaxBooked: ${maxBooked}, Available: ${available}`);
+
+                results[room.id] = {
+                    available,
+                    isAvailable: available > 0
+                };
+            }));
+
+            setSearchResults(results);
+        } catch (error) {
+            console.error("Error checking availability:", error);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
     const handleBookNow = (room: Room) => {
         setBookingRoom(room);
         setSelectedRoom(null);
     };
+
+    // Filter rooms based on search results
+    const displayedRooms = searchResults
+        ? rooms.filter(room => searchResults[room.id]?.isAvailable)
+        : rooms;
+
+    const totalAvailableCount = searchResults
+        ? displayedRooms.reduce((acc, room) => acc + (searchResults[room.id]?.available || 0), 0)
+        : 0;
 
     if (loading) {
         return (
@@ -115,8 +211,38 @@ export function RoomsSection() {
 
                 {/* Booking Bar (Floating overlap) */}
                 <div id="booking-bar">
-                    <BookingBar />
+                    <BookingBar onSearch={(params) => {
+                        if (params.checkIn && params.checkOut) {
+                            checkAvailability(params.checkIn, params.checkOut);
+                        } else {
+                            setSearchResults(null); // Clear search if dates invalid
+                        }
+                    }} />
                 </div>
+
+                {/* Search Feedback */}
+                {searchResults && (
+                    <div className="text-center mb-8 pt-8">
+                        <div className="inline-flex items-center gap-4 bg-white/50 backdrop-blur-md border border-slate-200 px-6 py-3 rounded-full shadow-sm">
+                            <span className="text-slate-900 font-medium">
+                                Found {displayedRooms.length} available room types <span className="text-slate-400 font-normal">({totalAvailableCount} rooms total)</span>
+                            </span>
+                            <div className="h-4 w-px bg-slate-300"></div>
+                            <button
+                                onClick={() => setSearchResults(null)}
+                                className="text-orange-600 hover:text-orange-700 font-semibold text-sm hover:underline"
+                            >
+                                Clear Search
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {isSearching && (
+                    <div className="text-center mb-8">
+                        <span className="text-slate-500 animate-pulse">Checking availability...</span>
+                    </div>
+                )}
 
                 <div className="text-center max-w-2xl mx-auto mb-16 pt-8">
                     <motion.h2
@@ -138,20 +264,20 @@ export function RoomsSection() {
                     </motion.p>
                 </div>
 
-                {rooms.length === 0 ? (
+                {displayedRooms.length === 0 ? (
                     <div className="text-center text-slate-500 py-12">
-                        No rooms available at the moment.
+                        {searchResults ? "No rooms available for the selected dates." : "No rooms available at the moment."}
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {rooms.map((room, index) => (
+                        {displayedRooms.map((room, index) => (
                             <motion.div
                                 key={room.id}
                                 initial={{ opacity: 0, y: 30 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, amount: 0.3 }}
                                 transition={{ delay: index * 0.1 }}
-                                className="group bg-white rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-500 flex flex-col border border-slate-100"
+                                className="group bg-white rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-500 flex flex-col border border-slate-100 relative"
                             >
                                 {/* Image Carousel */}
                                 <div className="relative h-72">
@@ -164,6 +290,14 @@ export function RoomsSection() {
                                     <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-slate-900 shadow-sm flex items-center gap-1 pointer-events-none z-10">
                                         <Maximize2 className="w-3 h-3" /> {room.size}
                                     </div>
+
+                                    {/* Availability Badge */}
+                                    {searchResults && searchResults[room.id] && (
+                                        <div className="absolute top-4 left-4 bg-emerald-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-sm z-10 flex items-center gap-1">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                            {searchResults[room.id].available} rooms left
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Content */}

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
+
 
 export function AboutSection() {
     return (
@@ -33,14 +33,7 @@ export function AboutSection() {
                             </p>
                         </div>
 
-                        <div className="flex gap-4 pt-4">
-                            <Button size="lg" className="bg-orange-600 hover:bg-orange-700 text-white rounded-full px-8 shadow-lg shadow-orange-200">
-                                Temple Timings
-                            </Button>
-                            <Button variant="outline" size="lg" className="rounded-full px-8 border-orange-200 text-orange-700 hover:bg-orange-50">
-                                View Gallery
-                            </Button>
-                        </div>
+
                     </motion.div>
 
                     {/* Image Grid - User Provided Images */}

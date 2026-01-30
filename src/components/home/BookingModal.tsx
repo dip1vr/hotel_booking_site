@@ -2,14 +2,18 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Calendar, User, Phone, Users, Minus, Plus, Loader2, CheckCircle, ArrowRight, CreditCard, Smartphone, QrCode, Download } from "lucide-react";
+import { X, Calendar as CalendarIcon, User, Phone, Users, Minus, Plus, Loader2, CheckCircle, ArrowRight, CreditCard, Smartphone, QrCode, Download } from "lucide-react";
 import { toJpeg } from 'html-to-image';
 import { TicketCard } from "./TicketCard";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/firebase";
-import { setDoc, doc, serverTimestamp, increment, updateDoc } from "firebase/firestore";
+import { setDoc, doc, serverTimestamp, increment, updateDoc, collection, getDocs, getDoc } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Room {
     id: number | string;
@@ -17,6 +21,7 @@ interface Room {
     price: string;
     image: string;
     images?: string[];
+    totalStock?: number; // Added to interface if not present in main types
 }
 
 interface BookingModalProps {
@@ -30,14 +35,18 @@ export function BookingModal({ room, isOpen, onClose }: BookingModalProps) {
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
     // Initial state derived from room details
-    const [checkIn, setCheckIn] = useState("");
-    const [checkOut, setCheckOut] = useState("");
+    const [checkIn, setCheckIn] = useState<Date | undefined>(undefined);
+    const [checkOut, setCheckOut] = useState<Date | undefined>(undefined);
     const [adults, setAdults] = useState(1);
     const [children, setChildren] = useState(0);
     const [roomsCount, setRoomsCount] = useState(1);
     const [name, setName] = useState("");
     const [phone, setPhone] = useState("");
     const [totalNights, setTotalNights] = useState(0);
+
+    // Availability State
+    const [bookedDates, setBookedDates] = useState<Record<string, number>>({});
+    const [roomStock, setRoomStock] = useState(10);
 
     // Payment & Flow State
     const [step, setStep] = useState(1); // 1: Details, 2: Payment, 3: Ticket
@@ -60,11 +69,38 @@ export function BookingModal({ room, isOpen, onClose }: BookingModalProps) {
         }
     }, [isOpen]);
 
+    // Fetch Availability for specific room
+    useEffect(() => {
+        if (isOpen && room) {
+            const fetchAvailability = async () => {
+                try {
+                    // Get room stock
+                    // Ideally fetch fresh, but room prop might have it or default
+                    // Let's assume passed room has stock or default 10
+                    // Or fetch fresh doc?
+                    // const roomDoc = await getDoc(doc(db, "rooms", room.id.toString()));
+                    // const stock = roomDoc.exists() ? (roomDoc.data().totalStock || 10) : 10;
+                    const stock = room.totalStock || 10;
+                    setRoomStock(stock);
+
+                    // Fetch bookings
+                    const availSnap = await getDocs(collection(db, "rooms", room.id.toString(), "availability"));
+                    const map: Record<string, number> = {};
+                    availSnap.forEach(d => {
+                        map[d.id] = d.data().bookedCount || 0;
+                    });
+                    setBookedDates(map);
+                } catch (e) {
+                    console.error("Error fetching room availability:", e);
+                }
+            };
+            fetchAvailability();
+        }
+    }, [isOpen, room]);
+
     useEffect(() => {
         if (checkIn && checkOut) {
-            const start = new Date(checkIn);
-            const end = new Date(checkOut);
-            const diffTime = Math.abs(end.getTime() - start.getTime());
+            const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             setTotalNights(diffDays > 0 ? diffDays : 0);
         } else {
@@ -127,6 +163,27 @@ export function BookingModal({ room, isOpen, onClose }: BookingModalProps) {
                 setError("Please fill in all details");
                 return;
             }
+
+            // Validate Availability
+            if (checkIn && checkOut) {
+                const start = new Date(checkIn);
+                const end = new Date(checkOut);
+
+                // Iterate through dates to check availability
+                const date = new Date(start);
+                while (date < end) {
+                    const dateStr = format(date, "yyyy-MM-dd");
+                    const bookedCount = bookedDates[dateStr] || 0;
+                    const available = Math.max(0, roomStock - bookedCount);
+
+                    if (available < roomsCount) {
+                        setError(`Only ${available} room${available !== 1 ? 's' : ''} available on ${format(date, "dd MMM yyyy")}. You requested ${roomsCount}.`);
+                        return;
+                    }
+                    date.setDate(date.getDate() + 1);
+                }
+            }
+
             setStep(2);
         } else if (step === 2) {
             handleFinalPayment();
@@ -165,8 +222,8 @@ export function BookingModal({ room, isOpen, onClose }: BookingModalProps) {
                     phone: phone
                 },
                 stay: {
-                    checkIn,
-                    checkOut,
+                    checkIn: checkIn ? format(checkIn, "yyyy-MM-dd") : "",
+                    checkOut: checkOut ? format(checkOut, "yyyy-MM-dd") : "",
                     totalNights: totalNights || 1,
                     adults,
                     children,
@@ -190,21 +247,19 @@ export function BookingModal({ room, isOpen, onClose }: BookingModalProps) {
             });
 
             // Manage Invitation by Date
-            if (room && room.id) {
+            if (room && room.id && checkIn && checkOut) {
                 // Helper to get all dates in range
                 const getDatesInRange = (startDate: Date, endDate: Date) => {
                     const date = new Date(startDate.getTime());
                     const dates = [];
                     while (date < endDate) {
-                        dates.push(new Date(date).toISOString().split('T')[0]);
+                        dates.push(format(date, "yyyy-MM-dd"));
                         date.setDate(date.getDate() + 1);
                     }
                     return dates;
                 };
 
-                const start = new Date(checkIn);
-                const end = new Date(checkOut);
-                const dates = getDatesInRange(start, end);
+                const dates = getDatesInRange(checkIn, checkOut); // Already Date objects
 
                 // Update availability for each date
                 const updatePromises = dates.map(dateStr => {
@@ -313,31 +368,123 @@ export function BookingModal({ room, isOpen, onClose }: BookingModalProps) {
 
                                         {/* Dates */}
                                         <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1.5">
+                                            {/* Check In */}
+                                            <div className="space-y-1.5 ">
                                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Check In</label>
-                                                <div className="relative">
-                                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                                    <input
-                                                        type="date"
-                                                        required
-                                                        value={checkIn}
-                                                        onChange={(e) => setCheckIn(e.target.value)}
-                                                        className="w-full pl-9 pr-4 py-2.5 bg-slate-50 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/20"
-                                                    />
-                                                </div>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <button className={cn(
+                                                            "w-full pl-9 pr-4 py-2.5 bg-slate-50 rounded-xl text-sm font-medium outline-none text-left flex items-center gap-2",
+                                                            !checkIn && "text-slate-500"
+                                                        )}>
+                                                            <CalendarIcon className="w-4 h-4 text-slate-400 absolute left-3" />
+                                                            <span className="ml-5">
+                                                                {checkIn ? format(checkIn, "dd MMM yyyy") : "Select Date"}
+                                                            </span>
+                                                        </button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-0" align="start">
+                                                        <Calendar
+                                                            mode="single"
+                                                            selected={checkIn}
+                                                            onSelect={setCheckIn}
+                                                            disabled={(date) => {
+                                                                const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+                                                                const dateStr = format(date, "yyyy-MM-dd");
+                                                                const bookedCount = bookedDates[dateStr] || 0;
+                                                                const isFull = (roomStock - bookedCount) <= 0;
+                                                                return isPast || isFull;
+                                                            }}
+                                                            formatters={{
+                                                                formatDay: (date) => {
+                                                                    const dateStr = format(date, "yyyy-MM-dd");
+                                                                    const bookedCount = bookedDates[dateStr] || 0;
+                                                                    const left = Math.max(0, roomStock - bookedCount);
+                                                                    const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+
+                                                                    if (isPast) return <div className="opacity-50">{date.getDate()}</div>;
+
+                                                                    return (
+                                                                        <div className="flex flex-col items-center justify-center relative py-1">
+                                                                            <span>{date.getDate()}</span>
+                                                                            {!isPast && (
+                                                                                <span className={cn(
+                                                                                    "text-[9px] font-bold leading-none mt-0.5 whitespace-nowrap",
+                                                                                    left === 0 ? "text-red-500 line-through" : "text-green-600"
+                                                                                )}>
+                                                                                    {left === 0 ? "Full" : `${left} left`}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    )
+                                                                }
+                                                            }}
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
                                             </div>
+
+                                            {/* Check Out */}
                                             <div className="space-y-1.5">
                                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Check Out</label>
-                                                <div className="relative">
-                                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                                    <input
-                                                        type="date"
-                                                        required
-                                                        value={checkOut}
-                                                        onChange={(e) => setCheckOut(e.target.value)}
-                                                        className="w-full pl-9 pr-4 py-2.5 bg-slate-50 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/20"
-                                                    />
-                                                </div>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <button className={cn(
+                                                            "w-full pl-9 pr-4 py-2.5 bg-slate-50 rounded-xl text-sm font-medium outline-none text-left flex items-center gap-2",
+                                                            !checkOut && "text-slate-500"
+                                                        )}>
+                                                            <CalendarIcon className="w-4 h-4 text-slate-400 absolute left-3" />
+                                                            <span className="ml-5">
+                                                                {checkOut ? format(checkOut, "dd MMM yyyy") : "Select Date"}
+                                                            </span>
+                                                        </button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-0" align="start">
+                                                        <Calendar
+                                                            mode="single"
+                                                            selected={checkOut}
+                                                            onSelect={setCheckOut}
+                                                            disabled={(date) => {
+                                                                const isPast = date < (checkIn || new Date(new Date().setHours(0, 0, 0, 0)));
+                                                                const dateStr = format(date, "yyyy-MM-dd");
+                                                                const bookedCount = bookedDates[dateStr] || 0;
+                                                                // For checkout, if previous night was full, can we check out today? 
+                                                                // Usually yes, availability is for the NIGHT. 
+                                                                // But if we simply disable "Full" days, user can't select checkout if that day is full?
+                                                                // Valid Logic: CheckOut date itself doesn't need availability, the NIGHTS before it do.
+                                                                // However, simpler to just disable full days to avoid confusion, 
+                                                                // OR better: check range validity on submit.
+                                                                // Disabling the specific day is good UX.
+                                                                const isFull = (roomStock - bookedCount) <= 0;
+                                                                return isPast || isFull;
+                                                            }}
+                                                            formatters={{
+                                                                formatDay: (date) => {
+                                                                    const dateStr = format(date, "yyyy-MM-dd");
+                                                                    const bookedCount = bookedDates[dateStr] || 0;
+                                                                    const left = Math.max(0, roomStock - bookedCount);
+                                                                    const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+
+                                                                    if (isPast) return <div className="opacity-50">{date.getDate()}</div>;
+
+                                                                    return (
+                                                                        <div className="flex flex-col items-center justify-center relative py-1">
+                                                                            <span>{date.getDate()}</span>
+                                                                            {!isPast && (
+                                                                                <span className={cn(
+                                                                                    "text-[9px] font-bold leading-none mt-0.5 whitespace-nowrap",
+                                                                                    left === 0 ? "text-red-500" : "text-green-600"
+                                                                                )}>
+                                                                                    {left === 0 ? "Full" : `${left} left`}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    )
+                                                                }
+                                                            }}
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
                                             </div>
                                         </div>
 
@@ -395,16 +542,43 @@ export function BookingModal({ room, isOpen, onClose }: BookingModalProps) {
                                                         <p className="text-xs text-slate-500">Auto-adjusted based on adults</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-3 bg-white px-2 py-1 rounded-lg border border-slate-200">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setRoomsCount(Math.max(1, roomsCount - 1))}
-                                                        className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-600"
-                                                    >
-                                                        <Minus className="w-3 h-3" />
-                                                    </button>
-                                                    <span className="text-sm font-bold w-4 text-center">{roomsCount}</span>
-                                                    <button type="button" onClick={() => setRoomsCount(roomsCount + 1)} className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-600"><Plus className="w-3 h-3" /></button>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <div className="flex items-center gap-3 bg-white px-2 py-1 rounded-lg border border-slate-200">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setRoomsCount(Math.max(1, roomsCount - 1))}
+                                                            className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-600"
+                                                        >
+                                                            <Minus className="w-3 h-3" />
+                                                        </button>
+                                                        <span className="text-sm font-bold w-4 text-center">{roomsCount}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setRoomsCount(roomsCount + 1)}
+                                                            className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-600"
+                                                        >
+                                                            <Plus className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                    {/* Availability Warning Helper */}
+                                                    {(() => {
+                                                        if (checkIn && checkOut) {
+                                                            let minAvailable = roomStock;
+                                                            let d = new Date(checkIn);
+                                                            const end = new Date(checkOut);
+                                                            while (d < end) {
+                                                                const dateStr = format(d, "yyyy-MM-dd");
+                                                                const booked = bookedDates[dateStr] || 0;
+                                                                minAvailable = Math.min(minAvailable, Math.max(0, roomStock - booked));
+                                                                d.setDate(d.getDate() + 1);
+                                                            }
+
+                                                            if (roomsCount > minAvailable) {
+                                                                return <span className="text-[10px] text-red-500 font-bold">Only {minAvailable} available</span>
+                                                            }
+                                                        }
+                                                        return null;
+                                                    })()}
                                                 </div>
                                             </div>
                                         </div>
@@ -537,8 +711,8 @@ export function BookingModal({ room, isOpen, onClose }: BookingModalProps) {
                                             ref={ticketRef}
                                             bookingId={bookingId}
                                             roomName={room.name}
-                                            checkIn={checkIn}
-                                            checkOut={checkOut}
+                                            checkIn={checkIn ? format(checkIn, "dd MMM yyyy") : ""}
+                                            checkOut={checkOut ? format(checkOut, "dd MMM yyyy") : ""}
                                             guestName={name}
                                             totalPrice={totalPrice}
                                             className="mb-6"
@@ -554,6 +728,69 @@ export function BookingModal({ room, isOpen, onClose }: BookingModalProps) {
                                             >
                                                 {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                                                 {isDownloading ? "Downloading..." : "Download Ticket"}
+                                            </Button>
+
+                                            <Button
+                                                onClick={async () => {
+                                                    if (!confirm("Are you sure you want to cancel this booking?")) return;
+                                                    setIsSubmitting(true);
+                                                    try {
+                                                        // 1. Mark booking as cancelled
+                                                        await updateDoc(doc(db, "bookings", bookingId), {
+                                                            status: "cancelled",
+                                                            cancelledAt: serverTimestamp()
+                                                        });
+
+                                                        // 2. Restore Availability
+                                                        if (room && room.id && checkIn && checkOut) {
+                                                            const getDatesInRange = (startDate: Date, endDate: Date) => {
+                                                                const date = new Date(startDate.getTime());
+                                                                const dates = [];
+                                                                while (date < endDate) {
+                                                                    dates.push(format(date, "yyyy-MM-dd"));
+                                                                    date.setDate(date.getDate() + 1);
+                                                                }
+                                                                return dates;
+                                                            };
+
+
+                                                            const dates = getDatesInRange(checkIn, checkOut);
+
+                                                            // Remove debug alert
+                                                            // alert(`Restoring ${roomsCount} room(s) for dates: ${dates.join(", ")}`);
+
+                                                            const updatePromises = dates.map(dateStr => {
+                                                                const availabilityRef = doc(db, "rooms", room.id.toString(), "availability", dateStr);
+                                                                return setDoc(availabilityRef, {
+                                                                    bookedCount: increment(-roomsCount)
+                                                                }, { merge: true });
+                                                            });
+                                                            await Promise.all(updatePromises);
+
+                                                            // Update local state to reflect cancellation immediately
+                                                            setBookedDates(prev => {
+                                                                const newDates = { ...prev };
+                                                                dates.forEach(dateStr => {
+                                                                    if (newDates[dateStr]) {
+                                                                        newDates[dateStr] = Math.max(0, newDates[dateStr] - roomsCount);
+                                                                    }
+                                                                });
+                                                                return newDates;
+                                                            });
+
+                                                            alert("Booking cancelled. Availability has been restored.");
+                                                            onClose();
+                                                        }
+                                                    } catch (e) {
+                                                        console.error("Error cancelling booking:", e);
+                                                        setError("Failed to cancel booking");
+                                                    } finally {
+                                                        setIsSubmitting(false);
+                                                    }
+                                                }}
+                                                className="w-full bg-red-50 hover:bg-red-100 text-red-600 h-12 rounded-xl text-base font-bold transition-all"
+                                            >
+                                                Cancel Booking
                                             </Button>
 
                                             <Button onClick={onClose} className="w-full bg-slate-900 hover:bg-slate-800 text-white h-12 rounded-xl text-base font-bold transition-all">
@@ -578,8 +815,21 @@ export function BookingModal({ room, isOpen, onClose }: BookingModalProps) {
                                         form={step === 1 ? "booking-form" : undefined}
                                         type={step === 1 ? "submit" : "button"}
                                         onClick={step === 2 ? handleFinalPayment : undefined}
-                                        disabled={isSubmitting}
-                                        className="w-full bg-slate-900 hover:bg-orange-600 text-white h-12 rounded-xl text-base font-bold shadow-lg shadow-slate-200 transition-all"
+                                        disabled={isSubmitting || (() => {
+                                            if (step === 1 && checkIn && checkOut) {
+                                                const start = new Date(checkIn);
+                                                const end = new Date(checkOut);
+                                                const d = new Date(start);
+                                                while (d < end) {
+                                                    const dateStr = format(d, "yyyy-MM-dd");
+                                                    const available = Math.max(0, roomStock - (bookedDates[dateStr] || 0));
+                                                    if (available < roomsCount) return true;
+                                                    d.setDate(d.getDate() + 1);
+                                                }
+                                            }
+                                            return false;
+                                        })()}
+                                        className="w-full bg-slate-900 hover:bg-orange-600 text-white h-12 rounded-xl text-base font-bold shadow-lg shadow-slate-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {isSubmitting ? (
                                             <Loader2 className="w-5 h-5 animate-spin" />

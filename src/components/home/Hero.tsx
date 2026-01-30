@@ -117,18 +117,18 @@ export function Hero() {
                     initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 0.9 }}
-                    className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl"
+                    className="grid grid-cols-3 gap-2 md:gap-6 w-full max-w-4xl"
                 >
                     {[
                         { label: "Luxury Rooms", value: "50+" },
                         { label: "Guest Rating", value: "4.9★" },
                         { label: "Happy Guests", value: "10K+" },
                     ].map((stat, index) => (
-                        <div key={index} className="bg-black/30 backdrop-blur-md border border-white/10 p-6 rounded-2xl flex flex-col items-center justify-center hover:bg-black/40 transition-colors">
-                            <span className="text-3xl md:text-4xl font-serif font-bold text-white mb-1">
+                        <div key={index} className="bg-black/30 backdrop-blur-md border border-white/10 p-2 md:p-6 rounded-xl md:rounded-2xl flex flex-col items-center justify-center hover:bg-black/40 transition-colors">
+                            <span className="text-xl md:text-4xl font-serif font-bold text-white mb-1">
                                 {stat.value}
                             </span>
-                            <span className="text-sm text-white/70 uppercase tracking-wider">
+                            <span className="text-[10px] md:text-sm text-white/70 uppercase tracking-wider text-center leading-tight">
                                 {stat.label}
                             </span>
                         </div>

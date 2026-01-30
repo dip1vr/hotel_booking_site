@@ -3,8 +3,52 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { Utensils, Clock, Star, ChefHat, Leaf } from "lucide-react";
+import { useEffect, useState } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export function DiningSection() {
+    const [content, setContent] = useState({
+        // Images
+        main: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=2070&auto=format&fit=crop",
+        food: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=2067&auto=format&fit=crop",
+        drink: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=1740&auto=format&fit=crop",
+        // Text
+        title: "Dining Experience",
+        subtitle: "Culinary Delights",
+        description: "Savor the authentic flavors of Rajasthan and global cuisines crafted by master chefs",
+        openingHours: "Breakfast: 7AM - 11AM • Dinner: 7PM - 11PM",
+        signatureDishes: "Dal Baati Churma • Laal Maas • Gatte ki Sabzi"
+    });
+
+    useEffect(() => {
+        const fetchContent = async () => {
+            try {
+                const docRef = doc(db, "content", "dining");
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    setContent(prev => ({
+                        ...prev,
+                        main: data.main || prev.main,
+                        food: data.food || prev.food,
+                        drink: data.drink || prev.drink,
+                        title: data.title || prev.title,
+                        subtitle: data.subtitle || prev.subtitle,
+                        description: data.description || prev.description,
+                        openingHours: data.openingHours || prev.openingHours,
+                        signatureDishes: data.signatureDishes || prev.signatureDishes
+                    }));
+                }
+            } catch (error) {
+                console.error("Error fetching dining content:", error);
+            }
+        };
+
+        fetchContent();
+    }, []);
+
     return (
         <section id="dining" className="py-24 bg-[#FFF9F3]">
             <div className="container mx-auto px-4">
@@ -17,7 +61,7 @@ export function DiningSection() {
                         className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-orange-100/80 text-orange-600 text-sm font-medium mb-6"
                     >
                         <Utensils className="w-4 h-4" />
-                        <span>Culinary Delights</span>
+                        <span>{content.subtitle}</span>
                     </motion.div>
                     <motion.h2
                         initial={{ opacity: 0, y: 20 }}
@@ -26,7 +70,7 @@ export function DiningSection() {
                         transition={{ delay: 0.1 }}
                         className="font-serif text-5xl font-bold mb-4 text-slate-900"
                     >
-                        Dining Experience
+                        {content.title}
                     </motion.h2>
                     <motion.p
                         initial={{ opacity: 0, y: 20 }}
@@ -35,7 +79,7 @@ export function DiningSection() {
                         transition={{ delay: 0.2 }}
                         className="text-slate-600 text-lg max-w-2xl mx-auto"
                     >
-                        Savor the authentic flavors of Rajasthan and global cuisines crafted by master chefs
+                        {content.description}
                     </motion.p>
                 </div>
 
@@ -52,9 +96,10 @@ export function DiningSection() {
                         {/* Main Image - Dining Hall */}
                         <div className="absolute top-0 left-0 w-[85%] h-[85%] rounded-3xl overflow-hidden shadow-2xl z-10 border-[6px] border-white">
                             <Image
-                                src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=2070&auto=format&fit=crop"
+                                src={content.main}
                                 alt="Dining Hall Ambience"
                                 fill
+                                unoptimized
                                 className="object-cover hover:scale-105 transition-transform duration-700"
                             />
                             <div className="absolute inset-0 bg-black/10" />
@@ -63,9 +108,10 @@ export function DiningSection() {
                         {/* Floating Image 1 - Food Close up (Updated URL) */}
                         <div className="absolute bottom-6 right-6 w-[55%] h-[40%] rounded-2xl overflow-hidden shadow-xl border-4 border-white z-20 hover:scale-105 transition-transform duration-500 bg-gray-100">
                             <Image
-                                src="https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=2067&auto=format&fit=crop"
+                                src={content.food}
                                 alt="Delicious Food"
                                 fill
+                                unoptimized
                                 className="object-cover"
                             />
                         </div>
@@ -73,9 +119,10 @@ export function DiningSection() {
                         {/* Floating Image 2 - Detail/Drink */}
                         <div className="absolute top-12 right-2 md:-right-4 w-[35%] h-[30%] rounded-2xl overflow-hidden shadow-lg border-4 border-white z-30 hover:scale-105 transition-transform duration-500 bg-gray-100">
                             <Image
-                                src="https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=1740&auto=format&fit=crop"
+                                src={content.drink}
                                 alt="Signature Drink"
                                 fill
+                                unoptimized
                                 className="object-cover"
                             />
                         </div>
@@ -111,7 +158,7 @@ export function DiningSection() {
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-slate-800">Opening Hours</h4>
-                                    <p className="text-slate-500">Breakfast: 7AM - 11AM • Dinner: 7PM - 11PM</p>
+                                    <p className="text-slate-500">{content.openingHours}</p>
                                 </div>
                             </div>
 
@@ -121,7 +168,7 @@ export function DiningSection() {
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-slate-800">Signature Dishes</h4>
-                                    <p className="text-slate-500">Dal Baati Churma • Laal Maas • Gatte ki Sabzi</p>
+                                    <p className="text-slate-500">{content.signatureDishes}</p>
                                 </div>
                             </div>
                         </div>

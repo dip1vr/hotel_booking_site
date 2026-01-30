@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from "lucide-react";
+import { Instagram, Mail, Phone, MapPin } from "lucide-react";
 
 export function Footer() {
     return (
@@ -59,12 +59,6 @@ export function Footer() {
                         <div className="flex gap-4">
                             <Link href="https://www.instagram.com/hotel_lord_krishna_0212?igsh=MTM1b3o3cm91NGoyZA==" className="p-2 bg-background rounded-full hover:text-primary shadow-sm transition-all hover:-translate-y-1">
                                 <Instagram className="w-5 h-5" />
-                            </Link>
-                            <Link href="#" className="p-2 bg-background rounded-full hover:text-primary shadow-sm transition-all hover:-translate-y-1">
-                                <Facebook className="w-5 h-5" />
-                            </Link>
-                            <Link href="#" className="p-2 bg-background rounded-full hover:text-primary shadow-sm transition-all hover:-translate-y-1">
-                                <Twitter className="w-5 h-5" />
                             </Link>
                         </div>
                     </div>

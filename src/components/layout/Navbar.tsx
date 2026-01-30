@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
-import { Facebook, Instagram, Twitter, Phone, Mail, ArrowRight, User, LogOut } from "lucide-react";
+import { Instagram, Phone, Mail, ArrowRight, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -283,12 +283,6 @@ export function Navbar() {
                                     <div className="flex gap-4 justify-center pt-6 border-t border-slate-100">
                                         <a href="https://www.instagram.com/hotel_lord_krishna_0212?igsh=MTM1b3o3cm91NGoyZA==" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50 transition-all">
                                             <Instagram className="w-4 h-4" />
-                                        </a>
-                                        <a href="#" className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50 transition-all">
-                                            <Facebook className="w-4 h-4" />
-                                        </a>
-                                        <a href="#" className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50 transition-all">
-                                            <Twitter className="w-4 h-4" />
                                         </a>
                                     </div>
                                 </motion.div>
